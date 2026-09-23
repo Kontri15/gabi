@@ -176,9 +176,7 @@
       <circle cx="92" cy="14" r="4"/><circle cx="30" cy="62" r="3.6"/><circle cx="150" cy="58" r="3"/>
       <circle cx="44" cy="128" r="3"/><circle cx="138" cy="112" r="2.4"/><circle cx="168" cy="134" r="2.2"/>
     </svg>
-    <p class="eyebrow" id="dateLine">Narodená pod Váhami</p>
     <h1>Všetko najlepšie, <em>Gabi</em></h1>
-    <p class="sub">Namiesto prianí na papier som ti napísal pesničku. Pusti si ju nahlas.</p>
   </header>
 
   <section class="player" id="player" aria-label="Prehrávač">
@@ -223,7 +221,6 @@
 /* ====== OBSAH – upravuj tu ====== */
 const CONFIG = {
   songTitle: "Gabka, Gabka",
-  dateLine: "Narodená pod Váhami",
   // [čas v sekundách alebo null, "riadok"]; riadky začínajúce "[" sú nadpisy častí
   lyrics: [
     [null, "[Intro]"],
@@ -267,7 +264,6 @@ const CONFIG = {
 
 const $ = id => document.getElementById(id);
 $('songTitle').textContent = CONFIG.songTitle;
-$('dateLine').textContent = CONFIG.dateLine;
 
 /* lyrics */
 const lines = [];
