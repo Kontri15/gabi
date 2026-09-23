@@ -50,7 +50,7 @@
   }
   .tag .hole{position:absolute;top:16px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--sky);box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
   .tag .for{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin:0}
-  .tag h2{font-family:var(--display);font-weight:400;font-size:40px;line-height:1.1;margin:.2em 0 .4em;color:var(--ink);text-wrap:balance}
+  .tag h2{font-family:var(--display);font-weight:400;font-size:clamp(26px,8vw,34px);line-height:1.1;margin:.3em 0 28px;color:var(--ink);white-space:nowrap}
   .tag h2 .emo{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:.85em}
   .tag p.hint{margin:0 0 28px;color:var(--muted);font-size:15px}
   .seal{
@@ -160,10 +160,9 @@
   <div class="tag" role="dialog" aria-labelledby="gateTitle">
     <span class="hole" aria-hidden="true"></span>
     <h2 id="gateTitle">For you Loove <span class="emo">🙂‍↔️</span></h2>
-    <p class="hint">Máš tu malý darček. Zapni si zvuk.</p>
     <button class="seal" id="openBtn" type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1s6 1 6 1zm0 0c2-4 6-4 6-1s-6 1-6 1z"/></svg>
-      Otvor darček
+      Otvoriť darček
     </button>
   </div>
 </div>
