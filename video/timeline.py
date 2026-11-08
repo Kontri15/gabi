@@ -73,40 +73,21 @@ SFX = [
     (OUTRO, "impact_soft"),
 ]
 
-# Text "ticks" (typewriter labels) are generated from LABELS
-
-# Opening hook variants (pick with env HOOK=winter|zima|vikend).
-# Each: (hook caption lines, payoff caption lines) - timings stay identical,
-# so the picture and soundtrack are shared by all variants.
+# The only on-screen text: the opening hook (pick with env HOOK=winter|zima).
 HOOKS = {
-    "winter": ([("Winter", "reg", 0.05), ("is coming.", "it", 1.00)],
-               [("A my sme", "reg", 2.00), ("ready.", "it", 2.50)]),
-    "zima":   ([("Zima", "reg", 0.05), ("prichádza.", "it", 1.00)],
-               [("A my sme", "reg", 2.00), ("ready.", "it", 2.50)]),
-    "vikend": ([("Niektorí cez víkend", "reg", 0.05), ("vyspávajú.", "it", 1.00)],
-               [("My chodíme", "reg", 2.00), ("hore.", "it", 2.50)]),
+    "winter": [("Winter", "reg", 0.05), ("is coming.", "it", 1.00)],
+    "zima":   [("Zima", "reg", 0.05), ("prichádza.", "it", 1.00)],
 }
 HOOK = os.environ.get("HOOK", "winter")
-_hook, _payoff = HOOKS[HOOK]
 
-# Big serif captions: (t_in, t_out, y_center_px, [(text, style, word_times)...])
+# Big serif captions: (t_in, t_out, y_center_px, [(text, style, word_time)...])
 # style: "reg" = Instrument Serif, "it" = Instrument Serif Italic.
 CAPTIONS = [
-    (0.05, 1.94, 610, _hook),
-    (2.00, 4.38, 620, _payoff),
-    (8.40, 11.92, 600, [("Nohy bolia.", "reg", 8.50), ("Hlava oddychuje.", "it", 10.00)]),
-    (14.10, 17.40, 600, [("Malí ľudia.", "reg", 14.20), ("Veľké hory.", "it", 15.20)]),
-    (17.55, 20.00, 640, [("Pošli to parťákovi,", "reg", 17.60), ("s ktorým ideš túto zimu.", "it", 18.00)]),
+    (0.05, 1.94, 610, HOOKS[HOOK]),
 ]
 
-LABELS = [
-    # (t_in, t_out, line1, line2)
-    (4.55, 6.45, "01 — ĽAD", "49.2485° N  20.1032° E"),
-    (6.55, 7.95, "02 — ŽĽAB", "TATRY"),
-    (8.45, 11.9, "03 — SKIALP", "1 954 m n. m."),
-    (14.2, 17.45, "TATRY", "ZIMA 2026"),
-    (17.6, 20.0, "ZIMA 26/27", "@loading"),   # loading bar that stops at 87 %
-]
+# Small mono labels (t_in, t_out, line1, line2) - none: keep it simple.
+LABELS = []
 
 # Falling snow overlay windows (t_in, t_out, density 0..1)
 SNOW = [(0.0, 2.0, 1.0), (17.5, 20.0, 0.7)]
