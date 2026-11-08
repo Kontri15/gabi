@@ -19,6 +19,7 @@ from pedalboard import (Pedalboard, Reverb, Compressor, Delay, HighpassFilter,
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from timeline import (DURATION, BEAT, SFX, LABELS, CAPTIONS, SHOTS,
                       DROP_A, BREAK, DROP_B, OUTRO)
+from make_captions import load_pct, LOAD_MS
 
 SR = 48000
 N = int((DURATION + 0.0) * SR)
@@ -382,6 +383,60 @@ def soft_pop(out, t, gain=0.18):
     place(out, st, t, gain)
 
 
+def braam(out, t, size=1.0, root=38):
+    """Low trailer 'braam' (detuned saw stack, opening filter, drive, big room)."""
+    dur = 2.6
+    n = int(dur * SR)
+    tt_ = np.arange(n) / SR
+    st = np.zeros((2, n), np.float32)
+    for m, w in ((root - 12, 0.55), (root, 1.0), (root + 7, 0.6), (root + 12, 0.45)):
+        for v in range(3):
+            for ch in range(2):
+                det = (v - 1) * 0.12 * (1 if ch == 0 else -1) + rng.uniform(-0.03, 0.03)
+                st[ch] += saw(mtof(m) * 2 ** (det / 12), n, rng.uniform()) * w * 0.25
+    amp = np.clip(tt_ / 0.018, 0, 1) * (0.55 + 0.45 * np.exp(-tt_ / 0.35)) * np.exp(-tt_ / (1.1 * size))
+    cut = 160 + 1700 * np.exp(-tt_ / 0.45) * np.clip(tt_ / 0.06, 0, 1)
+    st = tv_lowpass(st * amp, cut, q=1.6)
+    st = np.tanh(st * 2.2) * 0.6
+    sub = np.sin(2 * math.pi * mtof(root - 12) * tt_) * np.exp(-tt_ / 0.9) * np.clip(tt_ / 0.01, 0, 1) * 0.5
+    st += sub
+    st = fx(st, Pedalboard([HighpassFilter(30),
+                            Reverb(room_size=0.95, damping=0.6, wet_level=0.4, dry_level=0.85, width=1.0)]))
+    place(out, st, t, 0.5 * size)
+
+
+def ice_crack(out, t):
+    """Sharp ice crack: transient + crackle burst + short body thunk."""
+    n = int(0.7 * SR)
+    tt_ = np.arange(n) / SR
+    x = np.zeros(n, np.float32)
+    x += bandpass(noise(n), 1500, 9000) * np.exp(-tt_ / 0.006) * 1.2
+    for _ in range(34):
+        at = rng.exponential(0.07)
+        i = int(at * SR)
+        ln = int(rng.uniform(0.0008, 0.004) * SR)
+        if i + ln < n:
+            x[i:i + ln] += rng.normal(0, 1, ln) * rng.uniform(0.2, 1.0) * np.exp(-at / 0.15)
+    x = highpass(x, 900, 2)
+    body = np.sin(2 * math.pi * np.cumsum(60 + 90 * np.exp(-tt_ / 0.02)) / SR) * np.exp(-tt_ / 0.07) * 0.6
+    x = x * 0.8 + body
+    st = fx(np.stack([x, np.roll(x, 37)]).astype(np.float32),
+            Pedalboard([Reverb(room_size=0.7, damping=0.3, wet_level=0.3, dry_level=0.9)]))
+    place(out, st, t - 0.01, 0.9)
+
+
+def wind_howl(out, t0, t1):
+    """Resonant howling wind for the cold intro, cut dead on the drop."""
+    n = int((t1 - t0) * SR)
+    tt_ = np.arange(n) / SR
+    nz = np.stack([noise(n), noise(n)])
+    cut = 520 + 260 * np.sin(2 * math.pi * 0.55 * tt_ + 0.5) + 180 * (tt_ / (t1 - t0))
+    x = tv_lowpass(nz, cut, q=7.0)
+    x = highpass(x, 260, 2)
+    env = np.clip(tt_ / 0.25, 0, 1) * (0.7 + 0.3 * np.sin(2 * math.pi * 0.9 * tt_)) * np.clip((t1 - t0 - tt_) / 0.03, 0, 1)
+    place(out, x * env * 0.25, t0, 1.0)
+
+
 def make_sfx():
     out = buf()
     riser(1.7, DROP_A, out, 0.55)
@@ -403,17 +458,31 @@ def make_sfx():
             whoosh(out, t, 0.32, up=False, gain=1.4)
         elif kind == "swell_down":
             swell_down(out, t)
+        elif kind == "braam":
+            braam(out, t, 1.0)
+        elif kind == "braam2":
+            braam(out, t, 1.15)
+        elif kind == "ice_crack":
+            ice_crack(out, t)
     # typewriter ticks for the mono labels (must match make_captions.py timing)
     for t_in, t_out, l1, l2 in LABELS:
         for i, ch in enumerate(l1):
             if ch != " ":
                 tick(out, t_in + i * 0.035, 0.30)
+        if l2 == "@loading":   # soft ticks while the 'winter loading' bar climbs
+            d2 = len(l1) * 0.035 + 0.06
+            last = -1
+            for k in range(int(LOAD_MS / 1000 * 30) + 1):
+                p = load_pct(k / 30 * 1000)
+                if p // 6 != last:
+                    tick(out, t_in + d2 + k / 30, 0.18)
+                    last = p // 6
     # soft pops when caption lines land
     for t_in, t_out, y, lines in CAPTIONS:
         for text, style, t0 in lines:
-            soft_pop(out, t0, 0.45)
-    # opening "tape start" whoosh to grab attention in the first frame
-    whoosh(out, 0.25, 0.45, up=True, gain=0.9)
+            if t0 >= DROP_A + 0.1:     # hook lines get the braams, the drop gets the impact
+                soft_pop(out, t0, 0.45)
+    wind_howl(out, 0.0, DROP_A)
     return out
 
 

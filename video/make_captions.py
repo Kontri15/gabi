@@ -23,7 +23,7 @@ MAX_W = 940          # keep clear of the right-side UI buttons
 CREAM = "&H00EEF6FF&"   # ASS is &HAABBGGRR -> RGB(255,246,238)
 
 # per caption block: (size_reg, size_it)
-SIZES = [(140, 172), (150, 204), (132, 144), (140, 166), (96, 102)]
+SIZES = [(220, 200), (150, 204), (132, 144), (140, 166), (96, 102)]
 
 
 def ass_scale(path):
@@ -112,17 +112,54 @@ def label_events():
             parts.append(f"{{\\alpha&HFF&\\t({k},{k + 1},\\alpha&H00&)}}{c}")
         ev.append(f"Dialogue: 2,{ts(t_in)},{ts(t_out)},Mono,,0,0,0,,"
                   f"{{\\an7\\pos({x},{y1})\\fad(0,200)}}" + "".join(parts))
-        l2s = l2.replace(" ", "\\h")
         d2 = len(l1) * 35 + 60
+        if l2 == "@loading":
+            ev += loading_events(t_in, t_out, x, y2, d2)
+            continue
+        l2s = l2.replace(" ", "\\h")
         ev.append(f"Dialogue: 2,{ts(t_in)},{ts(t_out)},MonoSmall,,0,0,0,,"
                   f"{{\\an7\\pos({x},{y2})\\alpha&HFF&\\t({d2},{d2 + 300},\\alpha&H30&)\\fad(0,200)}}{l2s}")
+    return ev
+
+
+LOAD_TO, LOAD_MS, BAR_W = 87, 1500, 340
+
+
+def load_pct(ms_since_start):
+    """Same ease-out as the ASS \\t(...,0.5,...) on the bar: progress = u^0.5."""
+    u = min(max(ms_since_start / LOAD_MS, 0.0), 1.0)
+    return int(LOAD_TO * u ** 0.5)
+
+
+def loading_events(t_in, t_out, x, y, d2):
+    """'NAČÍTAVA SA…  87 %' with a bar that fills and stalls before 100 %."""
+    ev = []
+    fade = lambda a: f"\\alpha&HFF&\\t({d2},{d2 + 200},\\alpha&H{a}&)\\fad(0,200)"
+    ev.append(f"Dialogue: 2,{ts(t_in)},{ts(t_out)},MonoSmall,,0,0,0,,"
+              f"{{\\an7\\pos({x},{y}){fade('30')}}}NAČÍTAVA\\hSA…")
+    by = y + 50
+    ev.append(f"Dialogue: 2,{ts(t_in)},{ts(t_out)},Rule,,0,0,0,,"
+              f"{{\\an7\\pos({x},{by}){fade('B4')}\\bord0\\p1}}m 0 0 l {BAR_W} 0 {BAR_W} 5 0 5{{\\p0}}")
+    ev.append(f"Dialogue: 3,{ts(t_in)},{ts(t_out)},Rule,,0,0,0,,"
+              f"{{\\an7\\pos({x},{by}){fade('00')}\\fscx0\\t({d2},{d2 + LOAD_MS},0.5,\\fscx{LOAD_TO})\\p1}}"
+              f"m 0 0 l {BAR_W} 0 {BAR_W} 5 0 5{{\\p0}}")
+    # percentage counter, one event per frame while it climbs
+    t0 = t_in + d2 / 1000
+    steps = int(LOAD_MS / 1000 * 30) + 1
+    for k in range(steps + 1):
+        a = t0 + k / 30
+        b = t0 + (k + 1) / 30 if k < steps else t_out
+        pct = load_pct(k / 30 * 1000)
+        ev.append(f"Dialogue: 2,{ts(a)},{ts(b)},MonoSmall,,0,0,0,,"
+                  f"{{\\an9\\pos({x + BAR_W},{y}){'\\fad(0,200)' if k == steps else ''}\\1a&H30&}}{pct}\\h%")
     return ev
 
 
 def cover_events():
     """Static title for the cover image (no animation)."""
     ev = []
-    for text, style, y, size in (("Malí ľudia.", "reg", 370, 150), ("Veľké hory.", "it", 500, 176)):
+    (l1, _, _), (l2, _, _) = CAPTIONS[0][3]          # the opening hook
+    for text, style, y, size in ((l1, "reg", 360, 190), (l2, "it", 520, 190)):
         it = "\\i1" if style == "it" else "\\i0"
         ev.append(f"Dialogue: 0,0:00:00.00,0:00:05.00,Glow,,0,0,0,,{{\\an5{it}\\fs{size}\\pos(540,{y})\\blur18}}{text}")
         ev.append(f"Dialogue: 1,0:00:00.00,0:00:05.00,Serif,,0,0,0,,{{\\an5{it}\\fs{size}\\pos(540,{y})\\blur0.6}}{text}")

@@ -17,7 +17,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from timeline import (FPS, W, H, DURATION, SRC, SHOTS, CAPTIONS, LABELS,
-                      DROP_A, DROP_B, BREAK, OUTRO, BEAT)
+                      DROP_A, DROP_B, BREAK, OUTRO, BEAT, SNOW, COLD_INTRO)
 
 WORK = sys.argv[1]
 OUT = sys.argv[2]
@@ -190,10 +190,63 @@ def grade(img_f, key, t, frame_idx):
     hi = np.clip((luma - 0.55) * 2.2, 0, 1)
     f += sh * np.array([0.030, 0.012, -0.012], np.float32)   # BGR
     f += hi * np.array([-0.020, 0.004, 0.022], np.float32)
+    if t < COLD_INTRO:   # "winter is coming": colder, a bit drained, snaps back on the drop
+        lum = (0.0722 * f[..., 0] + 0.7152 * f[..., 1] + 0.2126 * f[..., 2])[..., None]
+        f = lum + (f - lum) * 0.72
+        f += np.array([0.04, 0.012, -0.025], np.float32)
+        f *= 0.95
     f *= VIGNETTE
     f *= text_shade(t)
     f += GRAIN[frame_idx % len(GRAIN)] * (0.6 + 0.8 * (1 - np.abs(luma - 0.5) * 2))
     return np.clip(f * 255, 0, 255).astype(np.uint8)
+
+
+# ---------------------------------------------------------------- snow
+class Snow:
+    """Deterministic falling snow: position is a pure function of time."""
+
+    def __init__(self, seed=3):
+        r = np.random.default_rng(seed)
+        self.layers = []
+        #        count, radius px (half-res), fall px/s, blur, alpha
+        for cnt, rad, vy, blur, alpha in ((240, (1.0, 2.2), (70, 140), 0.0, (0.35, 0.75)),
+                                          (110, (2.2, 4.0), (150, 260), 1.2, (0.45, 0.85)),
+                                          (22, (6.0, 10.0), (330, 480), 4.5, (0.25, 0.5))):
+            self.layers.append(dict(
+                x=r.uniform(0, W / 2, cnt), y=r.uniform(0, H / 2, cnt),
+                r=r.uniform(*rad, cnt), vy=r.uniform(*vy, cnt) / 2,
+                vx=r.uniform(-25, -5, cnt) / 2, amp=r.uniform(4, 18, cnt) / 2,
+                fq=r.uniform(0.4, 1.4, cnt), ph=r.uniform(0, 6.28, cnt),
+                a=r.uniform(*alpha, cnt), blur=blur, keep=r.uniform(0, 1, cnt)))
+
+    def alpha(self, t, density):
+        hw, hh = W // 2, H // 2
+        out = np.zeros((hh, hw), np.float32)
+        for L in self.layers:
+            lay = np.zeros((hh, hw), np.float32)
+            y = (L["y"] + L["vy"] * t) % (hh + 30) - 15
+            x = (L["x"] + L["vx"] * t + L["amp"] * np.sin(L["fq"] * t * 6.28 + L["ph"])) % (hw + 30) - 15
+            for i in np.nonzero(L["keep"] < density)[0]:
+                cv2.circle(lay, (int(x[i] * 4), int(y[i] * 4)), max(1, int(L["r"][i] * 4)),
+                           float(L["a"][i]), -1, lineType=cv2.LINE_AA, shift=2)
+            if L["blur"]:
+                lay = cv2.GaussianBlur(lay, (0, 0), L["blur"])
+            out = np.maximum(out, lay)
+        return cv2.resize(out, (W, H), interpolation=cv2.INTER_LINEAR)
+
+
+SNOWFALL = Snow()
+
+
+def add_snow(img, t):
+    for t_in, t_out, dens in SNOW:
+        if t_in <= t < t_out:
+            fade = min(1.0, (t - t_in) / 0.25 if t_in > 0 else 1.0, (t_out - t) / 0.12)
+            a = SNOWFALL.alpha(t, dens)[..., None] * fade
+            f = img.astype(np.float32)
+            f = f * (1 - a) + np.array([255, 250, 246], np.float32) * a   # BGR, faintly cool white
+            return np.clip(f, 0, 255).astype(np.uint8)
+    return img
 
 
 # ---------------------------------------------------------------- geometry
@@ -326,6 +379,7 @@ def compose(t):
     # during a dissolve the grade follows the dominant shot
     frame_idx = int(round(t * FPS))
     g = grade(out, key, t, frame_idx)
+    g = add_snow(g, t)
 
     # white flash on the hard drop cut
     if tin == "flash" and lt < 0.2:

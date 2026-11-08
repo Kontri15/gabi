@@ -4,6 +4,8 @@ All times are in seconds. Output is 1080x1920 @ 30 fps, 120 BPM grid
 (beat = 0.5 s, bar = 2 s), so every cut lands on a beat.
 """
 
+import os
+
 FPS = 30
 W, H = 1080, 1920
 BPM = 120
@@ -58,6 +60,9 @@ OUTRO = 18.0
 
 # Sound-design cues: (time, kind)
 SFX = [
+    (0.0, "braam"),
+    (1.0, "braam2"),
+    (DROP_A, "ice_crack"),
     (DROP_A, "impact"),
     (2.5, "whoosh_short"),
     (4.5, "whoosh_zoom"),
@@ -70,11 +75,25 @@ SFX = [
 
 # Text "ticks" (typewriter labels) are generated from LABELS
 
+# Opening hook variants (pick with env HOOK=winter|zima|vikend).
+# Each: (hook caption lines, payoff caption lines) - timings stay identical,
+# so the picture and soundtrack are shared by all variants.
+HOOKS = {
+    "winter": ([("Winter", "reg", 0.05), ("is coming.", "it", 1.00)],
+               [("A my sme", "reg", 2.00), ("ready.", "it", 2.50)]),
+    "zima":   ([("Zima", "reg", 0.05), ("prichádza.", "it", 1.00)],
+               [("A my sme", "reg", 2.00), ("ready.", "it", 2.50)]),
+    "vikend": ([("Niektorí cez víkend", "reg", 0.05), ("vyspávajú.", "it", 1.00)],
+               [("My chodíme", "reg", 2.00), ("hore.", "it", 2.50)]),
+}
+HOOK = os.environ.get("HOOK", "winter")
+_hook, _payoff = HOOKS[HOOK]
+
 # Big serif captions: (t_in, t_out, y_center_px, [(text, style, word_times)...])
 # style: "reg" = Instrument Serif, "it" = Instrument Serif Italic.
 CAPTIONS = [
-    (0.12, 1.94, 610, [("Niektorí cez víkend", "reg", 0.12), ("vyspávajú.", "it", 0.70)]),
-    (2.00, 4.38, 620, [("My chodíme", "reg", 2.00), ("hore.", "it", 2.50)]),
+    (0.05, 1.94, 610, _hook),
+    (2.00, 4.38, 620, _payoff),
     (8.40, 11.92, 600, [("Nohy bolia.", "reg", 8.50), ("Hlava oddychuje.", "it", 10.00)]),
     (14.10, 17.40, 600, [("Malí ľudia.", "reg", 14.20), ("Veľké hory.", "it", 15.20)]),
     (17.55, 20.00, 640, [("Pošli to parťákovi,", "reg", 17.60), ("s ktorým ideš túto zimu.", "it", 18.00)]),
@@ -85,5 +104,10 @@ LABELS = [
     (4.55, 6.45, "01 — ĽAD", "49.2485° N  20.1032° E"),
     (6.55, 7.95, "02 — ŽĽAB", "TATRY"),
     (8.45, 11.9, "03 — SKIALP", "1 954 m n. m."),
-    (14.2, 20.0, "TATRY", "ZIMA 2026"),
+    (14.2, 17.45, "TATRY", "ZIMA 2026"),
+    (17.6, 20.0, "ZIMA 26/27", "@loading"),   # loading bar that stops at 87 %
 ]
+
+# Falling snow overlay windows (t_in, t_out, density 0..1)
+SNOW = [(0.0, 2.0, 1.0), (17.5, 20.0, 0.7)]
+COLD_INTRO = 2.0   # cooler, desaturated look until the first drop

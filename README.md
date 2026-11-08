@@ -9,9 +9,11 @@ Narodeninová stránka s pesničkou „Gabka, Gabka“.
 
 Krátke lifestyle video (Reels / TikTok / Shorts, 1080×1920, 20 s) z horských záberov.
 
-- `tatry_reel.mp4` – hotové video s hudbou, zvukovými efektmi a titulkami
-- `tatry_reel_bez_hudby.mp4` – rovnaké video len so zvukovými efektmi a ruchmi (na pridanie trendového zvuku priamo v aplikácii)
+- `tatry_reel.mp4` – hotové video s hookom „Winter is coming. / A my sme ready.“, hudbou, efektmi a titulkami
+- `tatry_reel_zima_prichadza.mp4` – alternatívny hook po slovensky „Zima prichádza.“ (na A/B test)
+- `tatry_reel_bez_hudby.mp4` – hlavná verzia len so zvukovými efektmi a ruchmi (na pridanie trendového zvuku priamo v aplikácii)
 - `tatry_reel_cover.jpg` – titulný obrázok (cover)
+- hook sa vyberá premennou `HOOK` (`winter`, `zima`, `vikend`), texty sú v `timeline.py`
 - `render.sh` – celé video sa dá znova vyrenderovať: `./render.sh <priečinok so zdrojovými klipmi>`
 - strih a časovanie sú v `timeline.py`, titulky v `make_captions.py`, hudba a efekty v `build_audio.py`
 - fonty: Instrument Serif a DM Mono (SIL Open Font License, `fonts/`)

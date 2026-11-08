@@ -25,22 +25,25 @@ done
 # 2) soundtrack (music + sound design + ambience), 3) picture, 4) titles
 python3 "$HERE/build_audio.py" "$WORK" "$WORK/audio"
 [ "${REUSE_PICTURE:-0}" = 1 ] && [ -f "$WORK/picture.mp4" ] || python3 "$HERE/build_video.py" "$WORK" "$WORK/picture.mp4"
-python3 "$HERE/make_captions.py" "$WORK/captions.ass"
+HOOK=winter python3 "$HERE/make_captions.py" "$WORK/captions.ass"
+HOOK=zima   python3 "$HERE/make_captions.py" "$WORK/captions_zima.ass"
 
 # 5) final encodes: burn titles, loudness-normalise to -14 LUFS / -1.5 dBTP
-final() {  # $1 = mix wav, $2 = output
+final() {  # $1 = mix wav, $2 = output, $3 = captions file
   local J
   J=$(ffmpeg -hide_banner -nostats -i "$1" -af loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json -f null - 2>&1 | sed -n '/^{/,/^}/p')
   read -r MI MTP MLRA MTH OFF < <(python3 -c 'import json,sys; j=json.loads(sys.stdin.read()); print(j["input_i"],j["input_tp"],j["input_lra"],j["input_thresh"],j["target_offset"])' <<<"$J")
   ffmpeg -v error -y -i "$WORK/picture.mp4" -i "$1" \
-    -vf "ass=$WORK/captions.ass:fontsdir=$HERE/fonts" \
+    -vf "ass=$3:fontsdir=$HERE/fonts" \
     -af "loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=$MI:measured_TP=$MTP:measured_LRA=$MLRA:measured_thresh=$MTH:offset=$OFF:linear=true,aresample=48000" \
     -c:v libx264 -preset slow -crf 18 -maxrate 16M -bufsize 32M -profile:v high -level 4.2 -pix_fmt yuv420p -r 30 \
     -color_primaries bt709 -color_trc bt709 -colorspace bt709 \
     -c:a aac -b:a 320k -ar 48000 -movflags +faststart -shortest "$2"
 }
-final "$WORK/audio/mix_full.wav"    "$HERE/tatry_reel.mp4"
-final "$WORK/audio/mix_nomusic.wav" "$HERE/tatry_reel_bez_hudby.mp4"
+# main: "Winter is coming." hook; alt: Slovak "Zima prichádza." hook (A/B test)
+final "$WORK/audio/mix_full.wav"    "$HERE/tatry_reel.mp4"               "$WORK/captions.ass"
+final "$WORK/audio/mix_nomusic.wav" "$HERE/tatry_reel_bez_hudby.mp4"     "$WORK/captions.ass"
+final "$WORK/audio/mix_full.wav"    "$HERE/tatry_reel_zima_prichadza.mp4" "$WORK/captions_zima.ass"
 
 # cover frame for the Reel / TikTok
 python3 "$HERE/make_captions.py" "$WORK/cover.ass" --cover
